@@ -45,15 +45,22 @@
     "mocha": "^3.0.2"
   },
   "keywords": [
-    "ember-addon"
+    "ember-addon",
+    "ember-cli-deploy-plugin"
   ],
   "dependencies": {
+    "aws-sdk": "^2.6.1",
     "ember-cli-babel": "^5.1.6",
     "ember-cli-deploy-plugin": "^0.2.6",
     "fs-extra": "^0.30.0",
+    "fs-promise": "^0.5.0",
     "tar.gz": "^1.0.5"
   },
   "ember-addon": {
-    "configPath": "tests/dummy/config"
+    "configPath": "tests/dummy/config",
+    "after": [
+      "ember-cli-deploy-build",
+      "ember-cli-deploy-revision-data"
+    ]
   }
 }

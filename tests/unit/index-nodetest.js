@@ -18,10 +18,22 @@ var stubProject = {
 };
 
 describe('fastboot-s3 plugin', function() {
-  var subject, mockUi;
+  var subject, mockUi, plugin, requiredConfig, s3Client;
 
   beforeEach(function() {
+    s3Client = {
+      putObject: function(params) {
+        return {
+          promise: function() {
+            return Promise.resolve();
+          }
+        }
+      }
+    };
     subject = require('../../index');
+    plugin = subject.createDeployPlugin({
+      name: 'fastboot-s3'
+    });
     mockUi = {
       verbose: true,
       messages: [],
@@ -30,16 +42,26 @@ describe('fastboot-s3 plugin', function() {
         this.messages.push(message);
       }
     };
+    requiredConfig = {
+      bucket: "some bucket",
+      region: "some region"
+    };
+  });
+
+  describe('defaultConfig', function() {
+    it('has name', function() {
+      assert.equal(plugin.name, "fastboot-s3");
+    });
+
+    it('has default config', function() {
+      assert.equal(plugin.defaultConfig.archivePath, 'tmp/deploy-archive');
+      assert.equal(plugin.defaultConfig.deployInfo, 'fastboot-deploy-info.json');
+    });
   });
 
   describe('resolving distDir from the pipeline', function() {
     it('uses the context value', function() {
-      var plugin = subject.createDeployPlugin({
-        name: 'fastboot-s3'
-      });
-
-      var config = {
-      };
+      var config = requiredConfig;
       var context = {
         ui: mockUi,
         project: stubProject,
@@ -59,12 +81,7 @@ describe('fastboot-s3 plugin', function() {
 
   describe('resolving revisionKey from the pipeline', function() {
     it('uses the context value if it exists and commandOptions doesn\'t', function() {
-      var plugin = subject.createDeployPlugin({
-        name: 'fastboot-s3'
-      });
-
-      var config = {
-      };
+      var config = requiredConfig;
       var context = {
         ui: mockUi,
         project: stubProject,
@@ -84,12 +101,7 @@ describe('fastboot-s3 plugin', function() {
     });
 
     it('uses the commandOptions value if it exists', function() {
-      var plugin = subject.createDeployPlugin({
-        name: 'fastboot-s3'
-      });
-
-      var config = {
-      };
+      var config = requiredConfig;
       var context = {
         ui: mockUi,
         project: stubProject,
@@ -111,14 +123,9 @@ describe('fastboot-s3 plugin', function() {
     });
   });
 
-  describe('didBuild hook', function() {
+  describe('willUpload hook', function() {
     it('creates a tarball of the dist folder with revision', function() {
-      var plugin = subject.createDeployPlugin({
-        name: 'fastboot-s3'
-      });
-
-      var config = {
-      };
+      var config = requiredConfig;
       var context = {
         ui: mockUi,
         project: stubProject,
@@ -126,7 +133,7 @@ describe('fastboot-s3 plugin', function() {
           "fastboot-s3": config
         },
         commandOptions: { },
-        distDir: process.cwd() + '/tests/' + DIST_DIR,
+        distDir: process.cwd() + '/tests/fixtures/' + DIST_DIR,
         revisionData: {
           revisionKey: 'abcd'
         }
@@ -134,12 +141,11 @@ describe('fastboot-s3 plugin', function() {
 
       plugin.beforeHook(context);
       plugin.configure(context);
-      plugin.setup(context);
 
       var archivePath = context.config['fastboot-s3'].archivePath;
       var archiveName = "dist-abcd.tar";
 
-      return assert.isFulfilled(plugin.didBuild(context))
+      return assert.isFulfilled(plugin.willUpload(context))
         .then(function() {
           var fileName = path.join(archivePath, archiveName);
 
@@ -157,7 +163,48 @@ describe('fastboot-s3 plugin', function() {
             });
           });
         });
+    });
+  });
 
+  describe('upload', function() {
+    it('resolves if all uploads succeed', function() {
+      var config = {
+        s3Client: s3Client,
+        region: "region",
+        bucket: "bucket"
+      };
+      var context = {
+        ui: mockUi,
+        project: stubProject,
+        config: {
+          "fastboot-s3": config
+        },
+        commandOptions: { },
+        distDir: process.cwd() + '/tests/fixtures/' + DIST_DIR,
+        revisionData: {
+          revisionKey: 'abcd'
+        }
+      };
+
+      plugin.beforeHook(context);
+      plugin.configure(context);
+      plugin.willUpload(context);
+      const promises = plugin.upload(context);
+
+      return assert.isFulfilled(promises)
+        .then(function() {
+          assert.equal(mockUi.messages.length, 10);
+
+          var messages = mockUi.messages.reduce(function(previous, current) {
+            if (/- ✔  (dist-abcd\.tar|fastboot-deploy-info\.json)/.test(current)) {
+              previous.push(current);
+            }
+
+            return previous;
+          }, []);
+
+          assert.equal(messages.length, 2);
+        });
     });
   });
 });
