@@ -1,6 +1,6 @@
 # Ember-cli-deploy-fastboot-s3
 
-This README outlines the details of collaborating on this Ember addon.
+WIP
 
 ## Installation
 
