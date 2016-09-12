@@ -8,14 +8,14 @@
 This plugin is based on [FastBoot AWS][1], but it only manages FastBoot builds for S3, and does only three things:
 
 1. archives the FastBoot build(from [ember-cli-deploy-build][2]) using revision information(from [ember-cli-deploy-revision-data][3]).
-2. creates a file that contains FastBoot deploy info using the archived file as so:
+2. creates a file that contains FastBoot deploy info using the archived build as so:
 ```
 {
   "bucket": "S3_BUCKET",
   "key": "NAME_OF_ZIP_FILE"
 }
 ```
-3. uploads zipped build and the FastBoot deploy info file to S3.
+3. uploads archived build and the FastBoot deploy info file to S3.
 
 This plugin works along with [ember-fastboot-app-server][7]. The same `bucket` and `key` in FastBoot deploy info are required for both to work together.
 
