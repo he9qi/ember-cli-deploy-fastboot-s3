@@ -1,7 +1,7 @@
 {
   "name": "ember-cli-deploy-fastboot-s3",
-  "version": "0.0.0",
-  "description": "The default blueprint for ember-cli addons.",
+  "version": "0.1.0",
+  "description": "An ember-cli-deploy plugin that archives and uploads FastBoot build to AWS S3.",
   "directories": {
     "doc": "doc",
     "test": "tests"
@@ -15,7 +15,7 @@
   "engines": {
     "node": ">= 0.10.0"
   },
-  "author": "",
+  "author": "Qi He <qhe@heyook.com>",
   "license": "MIT",
   "devDependencies": {
     "broccoli-asset-rev": "^2.4.2",
@@ -46,7 +46,9 @@
   },
   "keywords": [
     "ember-addon",
-    "ember-cli-deploy-plugin"
+    "ember-cli-deploy-plugin",
+    "ember-cli-deploy-fastboot-s3",
+    "ember-cli-fastboot"
   ],
   "dependencies": {
     "aws-sdk": "^2.6.1",
