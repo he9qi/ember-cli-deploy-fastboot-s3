@@ -207,7 +207,7 @@ describe('fastboot-s3 plugin', function() {
     });
   });
 
-  describe('willUpload hook', function() {
+  describe('didPrepare hook', function() {
     it('creates a tarball of the dist folder with revision', function() {
       var config = requiredConfig;
       var context = {
@@ -229,7 +229,7 @@ describe('fastboot-s3 plugin', function() {
       var archivePath = context.config['fastboot-s3'].archivePath;
       var archiveName = "dist-abcd.tar";
 
-      return assert.isFulfilled(plugin.willUpload(context))
+      return assert.isFulfilled(plugin.didPrepare(context))
         .then(function() {
           var fileName = path.join(archivePath, archiveName);
 
@@ -276,7 +276,7 @@ describe('fastboot-s3 plugin', function() {
     it('resolves if all uploads succeed', function() {
       plugin.beforeHook(context);
       plugin.configure(context);
-      plugin.willUpload(context);
+      plugin.didPrepare(context);
 
       return assert.isFulfilled(plugin.upload(context))
         .then(function() {
@@ -319,7 +319,7 @@ describe('fastboot-s3 plugin', function() {
 
       plugin.beforeHook(context);
       plugin.configure(context);
-      plugin.willUpload(context);
+      plugin.didPrepare(context);
 
       return assert.isRejected(plugin.upload(context))
         .then(function() {

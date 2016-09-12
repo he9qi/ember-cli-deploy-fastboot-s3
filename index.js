@@ -36,7 +36,7 @@ module.exports = {
       },
       requiredConfig: ['bucket', 'region'],
 
-      willUpload: function(context) {
+      didPrepare: function(context) {
         return this._pack()
           .then(this._createDeployInfo());
       },

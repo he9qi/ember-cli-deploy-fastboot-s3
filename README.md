@@ -1,4 +1,13 @@
-# Ember-cli-deploy-fastboot-s3
+# FastBoot Server for S3
+
+ember-cli-deploy-build
+ember-cli-deploy-s3
+
+It is based on the FastBoot App Server, configured to use the S3 downloader and S3 notifier.
+
+FastBoot allows Ember apps to be rendered on the server, to support things like search crawlers and clients without JavaScript. For more information about FastBoot, see ember-cli-fastboot.
+
+This server is designed to run either on Elastic Beanstalk or on your own EC2 servers. It also works just fine for non-AWS hosting environments, such as Heroku or Digital Ocean, if you want to use S3 for deploying and storing your built application assets.
 
 WIP
 
