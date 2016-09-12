@@ -22,12 +22,12 @@ describe('fastboot-s3 plugin', function() {
 
   beforeEach(function() {
     s3Client = {
-      putObject: function(params) {
+      putObject: function() {
         return {
           promise: function() {
             return Promise.resolve();
           }
-        }
+        };
       }
     };
     subject = require('../../index');
@@ -56,6 +56,90 @@ describe('fastboot-s3 plugin', function() {
     it('has default config', function() {
       assert.equal(plugin.defaultConfig.archivePath, 'tmp/deploy-archive');
       assert.equal(plugin.defaultConfig.deployInfo, 'fastboot-deploy-info.json');
+    });
+  });
+
+  describe('required config', function() {
+    var context;
+
+    beforeEach(function() {
+      context = {
+        ui: mockUi,
+        project: stubProject,
+        config: {
+          'fastboot-s3': requiredConfig
+        },
+        commandOptions: {
+          revision: 'abcd'
+        },
+        revisionData: {
+          revisionKey: 'something-else'
+        }
+      };
+    });
+
+    it('warns about missing bucket', function() {
+      delete context.config['fastboot-s3'].bucket;
+
+      var plugin = subject.createDeployPlugin({
+        name: 'fastboot-s3'
+      });
+      plugin.beforeHook(context);
+      assert.throws(function(error){
+        plugin.configure(context);
+      });
+      var messages = mockUi.messages.reduce(function(previous, current) {
+        if (/- Missing required config: `bucket`/.test(current)) {
+          previous.push(current);
+        }
+
+        return previous;
+      }, []);
+
+      assert.equal(messages.length, 1);
+    });
+
+    it('warns about missing region', function() {
+      delete context.config['fastboot-s3'].region;
+
+      var plugin = subject.createDeployPlugin({
+        name: 'fastboot-s3'
+      });
+      plugin.beforeHook(context);
+      assert.throws(function(error){
+        plugin.configure(context);
+      });
+      var messages = mockUi.messages.reduce(function(previous, current) {
+        if (/- Missing required config: `region`/.test(current)) {
+          previous.push(current);
+        }
+
+        return previous;
+      }, []);
+
+      assert.equal(messages.length, 1);
+    });
+  });
+
+  describe('resolving s3Client from the pipline', function() {
+    it('uses the context value', function() {
+      var config = requiredConfig;
+      var s3Client = {};
+      var context = {
+        ui: mockUi,
+        project: stubProject,
+        config: {
+          "fastboot-s3": config
+        },
+        commandOptions: { },
+        distDir: "tmp/dist-deploy",
+        s3Client: s3Client
+      };
+
+      plugin.beforeHook(context);
+      plugin.configure(context);
+      assert.typeOf(config.s3Client, 'function');
+      assert.equal(config.s3Client(context), s3Client);
     });
   });
 
@@ -167,13 +251,15 @@ describe('fastboot-s3 plugin', function() {
   });
 
   describe('upload', function() {
-    it('resolves if all uploads succeed', function() {
+    var context;
+
+    beforeEach(function() {
       var config = {
         s3Client: s3Client,
         region: "region",
         bucket: "bucket"
       };
-      var context = {
+      context = {
         ui: mockUi,
         project: stubProject,
         config: {
@@ -185,13 +271,14 @@ describe('fastboot-s3 plugin', function() {
           revisionKey: 'abcd'
         }
       };
+    });
 
+    it('resolves if all uploads succeed', function() {
       plugin.beforeHook(context);
       plugin.configure(context);
       plugin.willUpload(context);
-      const promises = plugin.upload(context);
 
-      return assert.isFulfilled(promises)
+      return assert.isFulfilled(plugin.upload(context))
         .then(function() {
           assert.equal(mockUi.messages.length, 10);
 
@@ -206,5 +293,39 @@ describe('fastboot-s3 plugin', function() {
           assert.equal(messages.length, 2);
         });
     });
+
+    it('prints an error message if the upload errors', function() {
+      var context = {
+        ui: mockUi,
+        project: stubProject,
+        config: {
+          "fastboot-s3": requiredConfig
+        },
+        commandOptions: { },
+        distDir: process.cwd() + '/tests/fixtures/' + DIST_DIR,
+        revisionData: {
+          revisionKey: 'abcd'
+        },
+        s3Client: {
+          putObject: function() {
+            return {
+              promise: function() {
+                return Promise.reject(new Error('something bad went wrong'));
+              }
+            };
+          }
+        }
+      };
+
+      plugin.beforeHook(context);
+      plugin.configure(context);
+      plugin.willUpload(context);
+
+      return assert.isRejected(plugin.upload(context))
+        .then(function() {
+          assert.match(mockUi.messages[mockUi.messages.length-1], /- Error: something bad went wrong/);
+        });
+    });
+
   });
 });

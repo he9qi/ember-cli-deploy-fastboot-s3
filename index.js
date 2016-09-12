@@ -1,5 +1,4 @@
 /* jshint node: true */
-/* jshint jasmine: true */
 'use strict';
 
 var BasePlugin = require('ember-cli-deploy-plugin');
@@ -38,18 +37,14 @@ module.exports = {
       requiredConfig: ['bucket', 'region'],
 
       willUpload: function(context) {
-        var distDir = this.readConfig('distDir');
-        var archivePath = this.readConfig('archivePath');
-
-        fs.mkdirsSync(archivePath);
-
-        return this._pack(distDir);
+        return this._pack()
+          .then(this._createDeployInfo());
       },
 
       upload: function(context) {
         var self = this;
-        self.key = this._buildArchiveName();
-        self.s3 = this.readConfig('s3Client') || new AWS.S3({
+        this.key = this._buildArchiveName();
+        this.s3 = this.readConfig('s3Client') || new AWS.S3({
             region: this.readConfig('region'),
             accessKeyId: this.readConfig('accessKeyId'),
             secretAccessKey: this.readConfig('secretAccessKey')
@@ -61,8 +56,12 @@ module.exports = {
             return Promise.resolve();
           })
           .then(function() {
-            return self._updateDeployInfo(self.s3, self.key);
-          });
+            return self._uploadDeployInfo(self.s3);
+          })
+          .then(function() {
+            self.log('✔  ' + self.key, { verbose: true });
+          })
+          .catch(this._errorMessage.bind(this));
       },
 
       _upload: function(s3) {
@@ -70,9 +69,9 @@ module.exports = {
         var archiveName = this._buildArchiveName();
         var fileName = path.join(archivePath, archiveName);
 
-        let file = fs.createReadStream(fileName);
-        let bucket = this.readConfig('bucket');
-        let params = {
+        var file = fs.createReadStream(fileName);
+        var bucket = this.readConfig('bucket');
+        var params = {
           Bucket: bucket,
           Key: archiveName,
           Body: file
@@ -83,30 +82,36 @@ module.exports = {
         return s3.putObject(params).promise();
       },
 
-      _updateDeployInfo: function(s3, key) {
-        var self = this;
+      _uploadDeployInfo: function(s3, key) {
         var archivePath = this.readConfig('archivePath');
-        this.bucket = this.readConfig('bucket');
-        this.deployInfo = this.readConfig('deployInfo');
-        this.fileName = path.join(archivePath, this.deployInfo);
+        var deployInfo = this.readConfig('deployInfo');
+        var bucket = this.readConfig('bucket');
+        var fileName = path.join(archivePath, deployInfo);
 
-        return fsp.writeFile(this.fileName, `{"bucket":"${self.bucket}","key":"${key}"}`).then(function() {
-          let params = {
-            Bucket: self.bucket,
-            Key: self.deployInfo,
-            Body: fs.createReadStream(self.fileName)
-          };
+        var params = {
+          Bucket: bucket,
+          Key: deployInfo,
+          Body: fs.createReadStream(fileName)
+        };
 
-          self.log('✔  ' + self.deployInfo, { verbose: true });
-
-          return s3.putObject(params).promise();
-        });
+        return s3.putObject(params).promise();
       },
 
-      _pack: function(distDir) {
-        var archivePath = this.readConfig('archivePath');
-        var archiveName = this._buildArchiveName();
+      _createDeployInfo() {
+        var fileName = path.join(this.readConfig('archivePath'), this.readConfig('deployInfo'));
+        var bucket = this.readConfig('bucket');
+        var key = this._buildArchiveName();
 
+        return fsp.writeFile(fileName, `{"bucket":"${bucket}","key":"${key}"}`);
+      },
+
+      _pack: function() {
+        var distDir = this.readConfig('distDir');
+        var archivePath = this.readConfig('archivePath');
+
+        fs.mkdirsSync(archivePath);
+
+        var archiveName = this._buildArchiveName();
         var fileName = path.join(archivePath, archiveName);
 
         this.log('saving tarball of ' + distDir + ' to ' + fileName);
@@ -118,6 +123,14 @@ module.exports = {
         var distDirName = this.readConfig('distDir').split('/').slice(-1);
         var revisionKey = this.readConfig('revisionKey');
         return `${distDirName}-${revisionKey}.tar`;
+      },
+
+      _errorMessage: function(error) {
+        this.log(error, { color: 'red' });
+        if (error) {
+          this.log(error.stack, { color: 'red' });
+        }
+        return Promise.reject(error);
       }
     });
 
