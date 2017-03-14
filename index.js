@@ -7,7 +7,7 @@ var fs         = require('fs-extra');
 var fsp        = require('fs-promise');
 var path       = require('path');
 var move       = Promise.denodeify(fs.move);
-var targz      = require('tar.gz');
+var archiver   = require('archiver');
 
 var AWS = require('aws-sdk');
 
@@ -23,6 +23,7 @@ module.exports = {
 
       defaultConfig: {
         archivePath: path.join('tmp', DEFAULT_DEPLOY_ARCHIVE),
+        archiveType: 'zip',
         deployInfo: DEFAULT_DEPLOY_INFO,
         distDir: function(context) {
           return context.distDir;
@@ -34,14 +35,15 @@ module.exports = {
           return context.s3Client;
         }
       },
+
       requiredConfig: ['bucket', 'region'],
 
-      didPrepare: function(context) {
+      didPrepare: function(/*context*/) {
         return this._pack()
           .then(this._createDeployInfo());
       },
 
-      upload: function(context) {
+      upload: function(/*context*/) {
         var self = this;
         this.key = this._buildArchiveName();
         this.s3 = this.readConfig('s3Client') || new AWS.S3({
@@ -82,7 +84,7 @@ module.exports = {
         return s3.putObject(params).promise();
       },
 
-      _uploadDeployInfo: function(s3, key) {
+      _uploadDeployInfo: function(s3/*, key*/) {
         var archivePath = this.readConfig('archivePath');
         var deployInfo = this.readConfig('deployInfo');
         var bucket = this.readConfig('bucket');
@@ -101,28 +103,54 @@ module.exports = {
         var fileName = path.join(this.readConfig('archivePath'), this.readConfig('deployInfo'));
         var bucket = this.readConfig('bucket');
         var key = this._buildArchiveName();
-
+        
         return fsp.writeFile(fileName, `{"bucket":"${bucket}","key":"${key}"}`);
       },
 
       _pack: function() {
-        var distDir = this.readConfig('distDir');
-        var archivePath = this.readConfig('archivePath');
+        return new Promise((resolve, reject) => {
+          var distDir = this.readConfig('distDir');
+          var archivePath = this.readConfig('archivePath');
+          var archiveType = this.readConfig('archiveType');
 
-        fs.mkdirsSync(archivePath);
+          fs.mkdirsSync(archivePath);
 
-        var archiveName = this._buildArchiveName();
-        var fileName = path.join(archivePath, archiveName);
+          var archiveName = this._buildArchiveName();
+          var fileName = path.join(archivePath, archiveName);
 
-        this.log('saving tarball of ' + distDir + ' to ' + fileName);
+          this.log(`Saving archive of ${distDir} to ${fileName}`);
 
-        return targz().compress(distDir, fileName);
+          var output = fs.createWriteStream(fileName);
+
+          var archive = archiver(archiveType, { zlib: { level: 9 } });
+
+          archive.pipe(output);
+
+          archive
+            .directory(distDir, this._distDirName())
+            .finalize();
+
+          output.on('close', function() {
+            resolve();
+          });
+
+          archive.on('error', function(err) {
+            reject(err);
+          });
+
+        });
+
+      },
+
+      _distDirName() {
+        return this.readConfig('distDir').split('/').slice(-1)[0];
       },
 
       _buildArchiveName: function() {
-        var distDirName = this.readConfig('distDir').split('/').slice(-1);
+        var distDirName = this._distDirName();
         var revisionKey = this.readConfig('revisionKey');
-        return `${distDirName}-${revisionKey}.tar`;
+        var archiveType = this.readConfig('archiveType');
+        return `${distDirName}-${revisionKey}.${archiveType}`;
       },
 
       _errorMessage: function(error) {
