@@ -42,7 +42,8 @@
     "ember-welcome-page": "^1.0.1",
     "glob": "^7.0.6",
     "loader.js": "^4.0.1",
-    "mocha": "^3.0.2"
+    "mocha": "^3.0.2",
+    "unzip": "^0.1.11"
   },
   "keywords": [
     "ember-addon",
