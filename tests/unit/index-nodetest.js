@@ -1,11 +1,10 @@
-/* jshint node: true */
-/* jshint jasmine: true */
+/* eslint-env node, mocha */
 'use strict';
 
-var Promise   = require('ember-cli/lib/ext/promise');
+var RSVP      = require('rsvp');
 var assert    = require('../helpers/assert');
 var fs        = require('fs');
-var stat      = Promise.denodeify(fs.stat);
+var stat      = RSVP.denodeify(fs.stat);
 var path      = require('path');
 var unzip      = require('unzip');
 
@@ -25,7 +24,7 @@ describe('fastboot-s3 plugin', function() {
       putObject: function() {
         return {
           promise: function() {
-            return Promise.resolve();
+            return RSVP.Promise.resolve();
           }
         };
       }
@@ -237,7 +236,12 @@ describe('fastboot-s3 plugin', function() {
             assert.ok(stats.isFile());
           })
           .then(function() {
-            return fs.createReadStream(fileName).pipe(unzip.Extract({ path: archivePath }));
+            return new RSVP.Promise((resolve) => {
+              let asd = fs.createReadStream(fileName)
+                          .pipe(unzip.Extract({ path: archivePath }));
+              asd.on('close', resolve());
+            });
+
           })
           .then(function() {
             var extractedDir = archivePath + '/' + DIST_DIR;
@@ -310,7 +314,7 @@ describe('fastboot-s3 plugin', function() {
           putObject: function() {
             return {
               promise: function() {
-                return Promise.reject(new Error('something bad went wrong'));
+                return RSVP.Promise.reject(new Error('something bad went wrong'));
               }
             };
           }

@@ -1,12 +1,12 @@
-/* jshint node: true */
+/* eslint-env node */
 'use strict';
 
 var BasePlugin = require('ember-cli-deploy-plugin');
-var Promise    = require('ember-cli/lib/ext/promise');
+var RSVP       = require('rsvp');
 var fs         = require('fs-extra');
 var fsp        = require('fs-promise');
 var path       = require('path');
-var move       = Promise.denodeify(fs.move);
+var move       = RSVP.denodeify(fs.move);
 var archiver   = require('archiver');
 
 var AWS = require('aws-sdk');
@@ -55,7 +55,7 @@ module.exports = {
         return this._upload(self.s3)
           .then(function() {
             self.log('✔  ' + self.key, { verbose: true });
-            return Promise.resolve();
+            return RSVP.Promise.resolve();
           })
           .then(function() {
             return self._uploadDeployInfo(self.s3);
@@ -103,12 +103,12 @@ module.exports = {
         var fileName = path.join(this.readConfig('archivePath'), this.readConfig('deployInfo'));
         var bucket = this.readConfig('bucket');
         var key = this._buildArchiveName();
-        
+
         return fsp.writeFile(fileName, `{"bucket":"${bucket}","key":"${key}"}`);
       },
 
       _pack: function() {
-        return new Promise((resolve, reject) => {
+        return new RSVP.Promise((resolve, reject) => {
           var distDir = this.readConfig('distDir');
           var archivePath = this.readConfig('archivePath');
           var archiveType = this.readConfig('archiveType');
@@ -158,7 +158,7 @@ module.exports = {
         if (error) {
           this.log(error.stack, { color: 'red' });
         }
-        return Promise.reject(error);
+        return RSVP.Promise.reject(error);
       }
     });
 
