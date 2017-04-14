@@ -1,13 +1,12 @@
-/* jshint node: true */
-/* jshint jasmine: true */
+/* eslint-env node, mocha */
 'use strict';
 
-var Promise = require('ember-cli/lib/ext/promise');
-var assert  = require('../helpers/assert');
-var fs      = require('fs');
-var stat    = Promise.denodeify(fs.stat);
-var path    = require('path');
-var targz   = require('tar.gz');
+var RSVP      = require('rsvp');
+var assert    = require('../helpers/assert');
+var fs        = require('fs');
+var stat      = RSVP.denodeify(fs.stat);
+var path      = require('path');
+var unzip      = require('unzip');
 
 var DIST_DIR = 'dist';
 
@@ -25,7 +24,7 @@ describe('fastboot-s3 plugin', function() {
       putObject: function() {
         return {
           promise: function() {
-            return Promise.resolve();
+            return RSVP.Promise.resolve();
           }
         };
       }
@@ -85,7 +84,7 @@ describe('fastboot-s3 plugin', function() {
         name: 'fastboot-s3'
       });
       plugin.beforeHook(context);
-      assert.throws(function(error){
+      assert.throws(function(/*error*/){
         plugin.configure(context);
       });
       var messages = mockUi.messages.reduce(function(previous, current) {
@@ -106,7 +105,7 @@ describe('fastboot-s3 plugin', function() {
         name: 'fastboot-s3'
       });
       plugin.beforeHook(context);
-      assert.throws(function(error){
+      assert.throws(function(/*error*/){
         plugin.configure(context);
       });
       var messages = mockUi.messages.reduce(function(previous, current) {
@@ -227,7 +226,7 @@ describe('fastboot-s3 plugin', function() {
       plugin.configure(context);
 
       var archivePath = context.config['fastboot-s3'].archivePath;
-      var archiveName = "dist-abcd.tar";
+      var archiveName = "dist-abcd.zip";
 
       return assert.isFulfilled(plugin.didPrepare(context))
         .then(function() {
@@ -237,7 +236,12 @@ describe('fastboot-s3 plugin', function() {
             assert.ok(stats.isFile());
           })
           .then(function() {
-            return targz().extract(fileName, archivePath);
+            return new RSVP.Promise((resolve) => {
+              let asd = fs.createReadStream(fileName)
+                          .pipe(unzip.Extract({ path: archivePath }));
+              asd.on('close', resolve());
+            });
+
           })
           .then(function() {
             var extractedDir = archivePath + '/' + DIST_DIR;
@@ -280,10 +284,10 @@ describe('fastboot-s3 plugin', function() {
 
       return assert.isFulfilled(plugin.upload(context))
         .then(function() {
-          assert.equal(mockUi.messages.length, 10);
+          assert.equal(mockUi.messages.length, 11);
 
           var messages = mockUi.messages.reduce(function(previous, current) {
-            if (/- ✔  (dist-abcd\.tar|fastboot-deploy-info\.json)/.test(current)) {
+            if (/- ✔  (dist-abcd\.zip|fastboot-deploy-info\.json)/.test(current)) {
               previous.push(current);
             }
 
@@ -310,7 +314,7 @@ describe('fastboot-s3 plugin', function() {
           putObject: function() {
             return {
               promise: function() {
-                return Promise.reject(new Error('something bad went wrong'));
+                return RSVP.Promise.reject(new Error('something bad went wrong'));
               }
             };
           }
