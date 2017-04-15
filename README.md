@@ -187,6 +187,10 @@ Some more info: [Amazon CORS guide][5], [Stackoverflow][6]
 
 For more information on using ember-cli, visit [http://ember-cli.com/](http://ember-cli.com/).
 
+## Contributing
+PRs welcome!
+
+
 [1]: https://github.com/tomdale/fastboot-aws
 [2]: https://github.com/ember-cli-deploy/ember-cli-deploy-build
 [3]: https://github.com/ember-cli-deploy/ember-cli-deploy-revision-data
