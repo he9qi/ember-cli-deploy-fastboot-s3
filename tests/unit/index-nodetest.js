@@ -1,17 +1,17 @@
 /* eslint-env node, mocha */
 'use strict';
 
-var RSVP      = require('rsvp');
-var assert    = require('../helpers/assert');
-var fs        = require('fs');
-var stat      = RSVP.denodeify(fs.stat);
-var path      = require('path');
-var unzip      = require('unzip');
+var RSVP = require('rsvp');
+var assert = require('../helpers/assert');
+var fs = require('fs');
+var stat = RSVP.denodeify(fs.stat);
+var path = require('path');
+var unzip = require('unzip');
 
-var DIST_DIR = 'dist';
+var DIST_DIR = 'fastboot-deploy';
 
 var stubProject = {
-  name: function(){
+  name: function() {
     return 'my-project';
   }
 };
@@ -36,25 +36,28 @@ describe('fastboot-s3 plugin', function() {
     mockUi = {
       verbose: true,
       messages: [],
-      write: function() { },
+      write: function() {},
       writeLine: function(message) {
         this.messages.push(message);
       }
     };
     requiredConfig = {
-      bucket: "some bucket",
-      region: "some region"
+      bucket: 'some bucket',
+      region: 'some region'
     };
   });
 
   describe('defaultConfig', function() {
     it('has name', function() {
-      assert.equal(plugin.name, "fastboot-s3");
+      assert.equal(plugin.name, 'fastboot-s3');
     });
 
     it('has default config', function() {
-      assert.equal(plugin.defaultConfig.archivePath, 'tmp/deploy-archive');
-      assert.equal(plugin.defaultConfig.deployInfo, 'fastboot-deploy-info.json');
+      assert.equal(plugin.defaultConfig.archivePath, 'tmp/fastboot-deploy');
+      assert.equal(
+        plugin.defaultConfig.deployInfo,
+        'fastboot-deploy-info.json'
+      );
     });
   });
 
@@ -84,9 +87,11 @@ describe('fastboot-s3 plugin', function() {
         name: 'fastboot-s3'
       });
       plugin.beforeHook(context);
-      assert.throws(function(/*error*/){
-        plugin.configure(context);
-      });
+      assert.throws(
+        function(/*error*/) {
+          plugin.configure(context);
+        }
+      );
       var messages = mockUi.messages.reduce(function(previous, current) {
         if (/- Missing required config: `bucket`/.test(current)) {
           previous.push(current);
@@ -105,9 +110,11 @@ describe('fastboot-s3 plugin', function() {
         name: 'fastboot-s3'
       });
       plugin.beforeHook(context);
-      assert.throws(function(/*error*/){
-        plugin.configure(context);
-      });
+      assert.throws(
+        function(/*error*/) {
+          plugin.configure(context);
+        }
+      );
       var messages = mockUi.messages.reduce(function(previous, current) {
         if (/- Missing required config: `region`/.test(current)) {
           previous.push(current);
@@ -128,10 +135,10 @@ describe('fastboot-s3 plugin', function() {
         ui: mockUi,
         project: stubProject,
         config: {
-          "fastboot-s3": config
+          'fastboot-s3': config
         },
-        commandOptions: { },
-        distDir: "tmp/dist-deploy",
+        commandOptions: {},
+        distDir: 'tmp/dist-deploy',
         s3Client: s3Client
       };
 
@@ -149,10 +156,10 @@ describe('fastboot-s3 plugin', function() {
         ui: mockUi,
         project: stubProject,
         config: {
-          "fastboot-s3": config
+          'fastboot-s3': config
         },
-        commandOptions: { },
-        distDir: "tmp/dist-deploy"
+        commandOptions: {},
+        distDir: 'tmp/dist-deploy'
       };
 
       plugin.beforeHook(context);
@@ -163,15 +170,15 @@ describe('fastboot-s3 plugin', function() {
   });
 
   describe('resolving revisionKey from the pipeline', function() {
-    it('uses the context value if it exists and commandOptions doesn\'t', function() {
+    it("uses the context value if it exists and commandOptions doesn't", function() {
       var config = requiredConfig;
       var context = {
         ui: mockUi,
         project: stubProject,
         config: {
-          "fastboot-s3": config
+          'fastboot-s3': config
         },
-        commandOptions: { },
+        commandOptions: {},
         revisionData: {
           revisionKey: 'something-else'
         }
@@ -213,9 +220,9 @@ describe('fastboot-s3 plugin', function() {
         ui: mockUi,
         project: stubProject,
         config: {
-          "fastboot-s3": config
+          'fastboot-s3': config
         },
-        commandOptions: { },
+        commandOptions: {},
         distDir: process.cwd() + '/tests/fixtures/' + DIST_DIR,
         revisionData: {
           revisionKey: 'abcd'
@@ -226,31 +233,32 @@ describe('fastboot-s3 plugin', function() {
       plugin.configure(context);
 
       var archivePath = context.config['fastboot-s3'].archivePath;
-      var archiveName = "dist-abcd.zip";
 
-      return assert.isFulfilled(plugin.didPrepare(context))
-        .then(function() {
-          var fileName = path.join(archivePath, archiveName);
+      var archiveName = 'fastboot-deploy-abcd.zip';
 
-          return stat(fileName).then(function(stats) {
+      return assert.isFulfilled(plugin.didPrepare(context)).then(function() {
+        var fileName = path.join(archivePath, archiveName);
+        // assert.equal(fileName, 'foo');
+
+        return stat(fileName)
+          .then(function(stats) {
             assert.ok(stats.isFile());
           })
           .then(function() {
-            return new RSVP.Promise((resolve) => {
-              let asd = fs.createReadStream(fileName)
-                          .pipe(unzip.Extract({ path: archivePath }));
+            return new RSVP.Promise(resolve => {
+              let asd = fs
+                .createReadStream(fileName)
+                .pipe(unzip.Extract({ path: archivePath }));
               asd.on('close', resolve());
             });
-
           })
           .then(function() {
             var extractedDir = archivePath + '/' + DIST_DIR;
-
             return stat(extractedDir).then(function(stats) {
               assert.ok(stats.isDirectory());
             });
           });
-        });
+      });
     });
   });
 
@@ -260,16 +268,16 @@ describe('fastboot-s3 plugin', function() {
     beforeEach(function() {
       var config = {
         s3Client: s3Client,
-        region: "region",
-        bucket: "bucket"
+        region: 'region',
+        bucket: 'bucket'
       };
       context = {
         ui: mockUi,
         project: stubProject,
         config: {
-          "fastboot-s3": config
+          'fastboot-s3': config
         },
-        commandOptions: { },
+        commandOptions: {},
         distDir: process.cwd() + '/tests/fixtures/' + DIST_DIR,
         revisionData: {
           revisionKey: 'abcd'
@@ -282,20 +290,19 @@ describe('fastboot-s3 plugin', function() {
       plugin.configure(context);
       plugin.didPrepare(context);
 
-      return assert.isFulfilled(plugin.upload(context))
-        .then(function() {
-          assert.equal(mockUi.messages.length, 11);
+      return assert.isFulfilled(plugin.upload(context)).then(function() {
+        assert.equal(mockUi.messages.length, 11);
 
-          var messages = mockUi.messages.reduce(function(previous, current) {
-            if (/- ✔  (dist-abcd\.zip|fastboot-deploy-info\.json)/.test(current)) {
-              previous.push(current);
-            }
+        var messages = mockUi.messages.reduce(function(previous, current) {
+          if (/- ✔  (fastboot-deploy-abcd\.zip)/.test(current)) {
+            previous.push(current);
+          }
 
-            return previous;
-          }, []);
+          return previous;
+        }, []);
 
-          assert.equal(messages.length, 2);
-        });
+        assert.equal(messages.length, 1);
+      });
     });
 
     it('prints an error message if the upload errors', function() {
@@ -303,9 +310,9 @@ describe('fastboot-s3 plugin', function() {
         ui: mockUi,
         project: stubProject,
         config: {
-          "fastboot-s3": requiredConfig
+          'fastboot-s3': requiredConfig
         },
-        commandOptions: { },
+        commandOptions: {},
         distDir: process.cwd() + '/tests/fixtures/' + DIST_DIR,
         revisionData: {
           revisionKey: 'abcd'
@@ -314,7 +321,9 @@ describe('fastboot-s3 plugin', function() {
           putObject: function() {
             return {
               promise: function() {
-                return RSVP.Promise.reject(new Error('something bad went wrong'));
+                return RSVP.Promise.reject(
+                  new Error('something bad went wrong')
+                );
               }
             };
           }
@@ -325,11 +334,53 @@ describe('fastboot-s3 plugin', function() {
       plugin.configure(context);
       plugin.didPrepare(context);
 
-      return assert.isRejected(plugin.upload(context))
-        .then(function() {
-          assert.match(mockUi.messages[mockUi.messages.length-1], /- Error: something bad went wrong/);
-        });
+      return assert.isRejected(plugin.upload(context)).then(function() {
+        assert.match(
+          mockUi.messages[mockUi.messages.length - 1],
+          /- Error: something bad went wrong/
+        );
+      });
     });
+  });
 
+  describe('activate hook', function() {
+    it('prints success message if activation succeeds', function() {
+      var context = {
+        ui: mockUi,
+        project: stubProject,
+        config: {
+          'fastboot-s3': requiredConfig
+        },
+        commandOptions: {
+          revisionKey: '1234'
+        },
+        distDir: process.cwd() + '/tests/fixtures/' + DIST_DIR,
+        revisionData: {
+          revisionKey: 'revABCD'
+        },
+        s3Client: {
+          putObject: function(data) {
+            return {
+              promise: function() {
+                if (/revABCD/.test(data.Body)) {
+                  return RSVP.Promise.resolve('Activated revision ok');
+                } else {
+                  return RSVP.Promise.reject('Activated revision not ok');
+                }
+              }
+            };
+          }
+        }
+      };
+
+      plugin.beforeHook(context);
+      plugin.configure(context);
+
+      var promise = plugin.activate(context);
+
+      return assert.isFulfilled(promise).then(function() {
+        assert.ok(/activated revison revABCD/.test(mockUi.messages.slice(-1)));
+      });
+    });
   });
 });
