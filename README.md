@@ -5,6 +5,7 @@
 [![Build Status](https://travis-ci.org/he9qi/ember-cli-deploy-fastboot-s3.svg?branch=master)](https://travis-ci.org/he9qi/ember-cli-deploy-fastboot-s3)
 [![npm version](https://badge.fury.io/js/ember-cli-deploy-fastboot-s3.svg)](https://badge.fury.io/js/ember-cli-deploy-fastboot-s3)
 [![](https://camo.githubusercontent.com/d65a04992412d3a15584f0d302a69df2749176c7/68747470733a2f2f656d6265722d636c692d6465706c6f792e6769746875622e696f2f656d6265722d636c692d6465706c6f792d76657273696f6e2d6261646765732f706c7567696e732f656d6265722d636c692d6465706c6f792d73332e737667)](http://ember-cli-deploy.github.io/ember-cli-deploy-version-badges/)
+[![Ember Observer Score](https://emberobserver.com/badges/ember-cli-deploy-fastboot-s3.svg)](https://emberobserver.com/addons/ember-cli-deploy-fastboot-s3)
 
 This plugin is based on [FastBoot AWS][1], but it only manages FastBoot builds for S3, and does only three things:
 
