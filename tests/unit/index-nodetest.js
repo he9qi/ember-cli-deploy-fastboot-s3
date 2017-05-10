@@ -8,7 +8,7 @@ var stat = RSVP.denodeify(fs.stat);
 var path = require('path');
 var unzip = require('unzip');
 
-var DIST_DIR = 'fastboot-deploy';
+var DIST_DIR = 'dist';
 
 var stubProject = {
   name: function() {
@@ -53,7 +53,7 @@ describe('fastboot-s3 plugin', function() {
     });
 
     it('has default config', function() {
-      assert.equal(plugin.defaultConfig.archivePath, 'tmp/fastboot-deploy');
+      assert.equal(plugin.defaultConfig.archivePath, 'tmp/dist');
       assert.equal(
         plugin.defaultConfig.deployInfo,
         'fastboot-deploy-info.json'
@@ -138,7 +138,7 @@ describe('fastboot-s3 plugin', function() {
           'fastboot-s3': config
         },
         commandOptions: {},
-        distDir: 'tmp/dist-deploy',
+        distDir: 'tmp/dist',
         s3Client: s3Client
       };
 
@@ -159,13 +159,13 @@ describe('fastboot-s3 plugin', function() {
           'fastboot-s3': config
         },
         commandOptions: {},
-        distDir: 'tmp/dist-deploy'
+        distDir: 'tmp/dist'
       };
 
       plugin.beforeHook(context);
       plugin.configure(context);
       assert.typeOf(config.distDir, 'function');
-      assert.equal(config.distDir(context), 'tmp/dist-deploy');
+      assert.equal(config.distDir(context), 'tmp/dist');
     });
   });
 
@@ -234,11 +234,10 @@ describe('fastboot-s3 plugin', function() {
 
       var archivePath = context.config['fastboot-s3'].archivePath;
 
-      var archiveName = 'fastboot-deploy-abcd.zip';
+      var archiveName = 'dist-abcd.zip';
 
       return assert.isFulfilled(plugin.didPrepare(context)).then(function() {
         var fileName = path.join(archivePath, archiveName);
-        // assert.equal(fileName, 'foo');
 
         return stat(fileName)
           .then(function(stats) {
@@ -294,7 +293,7 @@ describe('fastboot-s3 plugin', function() {
         assert.equal(mockUi.messages.length, 11);
 
         var messages = mockUi.messages.reduce(function(previous, current) {
-          if (/- ✔  (fastboot-deploy-abcd\.zip)/.test(current)) {
+          if (/- ✔  (dist-abcd\.zip)/.test(current)) {
             previous.push(current);
           }
 
