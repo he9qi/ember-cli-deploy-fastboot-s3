@@ -10,7 +10,7 @@ var archiver = require('archiver');
 var AWS = require('aws-sdk');
 
 var DEFAULT_DEPLOY_INFO = 'fastboot-deploy-info.json';
-var DEFAULT_DEPLOY_ARCHIVE = 'fastboot-deploy';
+var DEFAULT_DEPLOY_ARCHIVE = 'dist';
 
 module.exports = {
   name: 'ember-cli-deploy-fastboot-s3',
