@@ -28,6 +28,7 @@ module.exports = {
           return context.distDir;
         },
         endpoint: undefined,
+        prefix: '',
         revisionKey: function(context) {
           return (
             context.commandOptions.revision ||
@@ -51,7 +52,9 @@ module.exports = {
 
       upload: function(/*context*/) {
         var self = this;
-        this.key = this._buildArchiveName();
+        var prefix = this.readConfig('prefix');
+        var archiveName = this._buildArchiveName();
+        this.key = prefix === '' ? archiveName : [prefix, archiveName].join('/');
         this.s3 =
           this.readConfig('s3Client') ||
           new AWS.S3({
@@ -99,13 +102,15 @@ module.exports = {
       _upload: function(s3) {
         var archivePath = this.readConfig('archivePath');
         var archiveName = this._buildArchiveName();
+        var prefix = this.readConfig('prefix');
+        var key = prefix === '' ? archiveName : [prefix, archiveName].join('/');
         var fileName = path.join(archivePath, archiveName);
 
         var file = fs.createReadStream(fileName);
         var bucket = this.readConfig('bucket');
         var params = {
           Bucket: bucket,
-          Key: archiveName,
+          Key: key,
           Body: file
         };
 
@@ -119,10 +124,12 @@ module.exports = {
       _uploadDeployInfo: function(s3 /*, key*/) {
         var deployInfo = this.readConfig('deployInfo');
         var bucket = this.readConfig('bucket');
+        var prefix = this.readConfig('prefix');
         var body = this._createDeployInfo();
+        var key = prefix === '' ? deployInfo : [prefix, deployInfo].join('/');
         var params = {
           Bucket: bucket,
-          Key: deployInfo,
+          Key: key,
           Body: body
         };
 
@@ -131,7 +138,9 @@ module.exports = {
 
       _createDeployInfo() {
         var bucket = this.readConfig('bucket');
-        var key = this._buildArchiveName();
+        var prefix = this.readConfig('prefix');
+        var archiveName = this._buildArchiveName();
+        var key = prefix === '' ? archiveName : [prefix, archiveName].join('/');
 
         return `{"bucket":"${bucket}","key":"${key}"}`;
       },
@@ -174,6 +183,7 @@ module.exports = {
         var deployArchive = this.readConfig('deployArchive');
         var revisionKey = this.readConfig('revisionKey');
         var archiveType = this.readConfig('archiveType');
+        var prefix = this.readConfig('prefix');
         return `${deployArchive}-${revisionKey}.${archiveType}`;
       },
 
