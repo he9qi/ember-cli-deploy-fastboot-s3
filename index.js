@@ -27,6 +27,7 @@ module.exports = {
         distDir: function(context) {
           return context.distDir;
         },
+        endpoint: undefined,
         revisionKey: function(context) {
           return (
             context.commandOptions.revision ||
@@ -56,7 +57,8 @@ module.exports = {
           new AWS.S3({
             region: this.readConfig('region'),
             accessKeyId: this.readConfig('accessKeyId'),
-            secretAccessKey: this.readConfig('secretAccessKey')
+            secretAccessKey: this.readConfig('secretAccessKey'),
+            endpoint: this.readConfig('endpoint')
           });
 
         return this._upload(self.s3)
@@ -77,7 +79,8 @@ module.exports = {
           new AWS.S3({
             region: this.readConfig('region'),
             accessKeyId: this.readConfig('accessKeyId'),
-            secretAccessKey: this.readConfig('secretAccessKey')
+            secretAccessKey: this.readConfig('secretAccessKey'),
+            endpoint: this.readConfig('endpoint')
           });
 
         this.log(`preparing to activate ${revisionKey}`, {
