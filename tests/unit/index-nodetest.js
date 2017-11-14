@@ -17,7 +17,7 @@ var stubProject = {
 };
 
 describe('fastboot-s3 plugin', function() {
-  var subject, mockUi, plugin, requiredConfig, s3Client;
+  var subject, mockUi, plugin, fullConfig, s3Client;
 
   beforeEach(function() {
     s3Client = {
@@ -41,9 +41,11 @@ describe('fastboot-s3 plugin', function() {
         this.messages.push(message);
       }
     };
-    requiredConfig = {
+    fullConfig = {
       bucket: 'some bucket',
-      region: 'some region'
+      region: 'some region',
+      endpoint: 'some endpoint',
+      prefix: 'some prefix'
     };
   });
 
@@ -69,7 +71,7 @@ describe('fastboot-s3 plugin', function() {
         ui: mockUi,
         project: stubProject,
         config: {
-          'fastboot-s3': requiredConfig
+          'fastboot-s3': fullConfig
         },
         commandOptions: {
           revision: 'abcd'
@@ -103,8 +105,9 @@ describe('fastboot-s3 plugin', function() {
       assert.equal(messages.length, 1);
     });
 
-    it('warns about missing region', function() {
+    it('warns about missing region and endpoint', function() {
       delete context.config['fastboot-s3'].region;
+      delete context.config['fastboot-s3'].endpoint;
 
       var plugin = subject.createDeployPlugin({
         name: 'fastboot-s3'
@@ -116,7 +119,7 @@ describe('fastboot-s3 plugin', function() {
         }
       );
       var messages = mockUi.messages.reduce(function(previous, current) {
-        if (/- Missing required config: `region`/.test(current)) {
+        if (/You must configure either an 'endpoint' or a 'region' to use the AWS.S3 client./.test(current)) {
           previous.push(current);
         }
 
@@ -129,7 +132,7 @@ describe('fastboot-s3 plugin', function() {
 
   describe('resolving s3Client from the pipline', function() {
     it('uses the context value', function() {
-      var config = requiredConfig;
+      var config = fullConfig;
       var s3Client = {};
       var context = {
         ui: mockUi,
@@ -151,7 +154,7 @@ describe('fastboot-s3 plugin', function() {
 
   describe('resolving distDir from the pipeline', function() {
     it('uses the context value', function() {
-      var config = requiredConfig;
+      var config = fullConfig;
       var context = {
         ui: mockUi,
         project: stubProject,
@@ -171,7 +174,7 @@ describe('fastboot-s3 plugin', function() {
 
   describe('resolving revisionKey from the pipeline', function() {
     it("uses the context value if it exists and commandOptions doesn't", function() {
-      var config = requiredConfig;
+      var config = fullConfig;
       var context = {
         ui: mockUi,
         project: stubProject,
@@ -191,7 +194,7 @@ describe('fastboot-s3 plugin', function() {
     });
 
     it('uses the commandOptions value if it exists', function() {
-      var config = requiredConfig;
+      var config = fullConfig;
       var context = {
         ui: mockUi,
         project: stubProject,
@@ -215,7 +218,7 @@ describe('fastboot-s3 plugin', function() {
 
   describe('didPrepare hook', function() {
     it('creates a tarball of the dist folder with revision', function() {
-      var config = requiredConfig;
+      var config = fullConfig;
       var context = {
         ui: mockUi,
         project: stubProject,
@@ -287,6 +290,7 @@ describe('fastboot-s3 plugin', function() {
     it('resolves if all uploads succeed', function() {
       plugin.beforeHook(context);
       plugin.configure(context);
+      plugin.setup(context);
       plugin.didPrepare(context);
 
       return assert.isFulfilled(plugin.upload(context)).then(function() {
@@ -309,7 +313,7 @@ describe('fastboot-s3 plugin', function() {
         ui: mockUi,
         project: stubProject,
         config: {
-          'fastboot-s3': requiredConfig
+          'fastboot-s3': fullConfig
         },
         commandOptions: {},
         distDir: process.cwd() + '/tests/fixtures/' + DIST_DIR,
@@ -331,6 +335,7 @@ describe('fastboot-s3 plugin', function() {
 
       plugin.beforeHook(context);
       plugin.configure(context);
+      plugin.setup(context);
       plugin.didPrepare(context);
 
       return assert.isRejected(plugin.upload(context)).then(function() {
@@ -348,7 +353,7 @@ describe('fastboot-s3 plugin', function() {
         ui: mockUi,
         project: stubProject,
         config: {
-          'fastboot-s3': requiredConfig
+          'fastboot-s3': fullConfig
         },
         commandOptions: {
           revisionKey: '1234'
@@ -374,6 +379,7 @@ describe('fastboot-s3 plugin', function() {
 
       plugin.beforeHook(context);
       plugin.configure(context);
+      plugin.setup(context);
 
       var promise = plugin.activate(context);
 
