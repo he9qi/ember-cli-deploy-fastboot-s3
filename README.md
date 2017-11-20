@@ -92,9 +92,21 @@ The AWS bucket that the files will be uploaded to.
 
 *Default:* `undefined`
 
-### region (`required`)
+### region
 
 The region the AWS `bucket` is located in.
+
+*Default:* `undefined`
+
+### prefix
+
+A path to upload your files to within the bucket.
+
+*Default:* `undefined`
+
+### endpoint
+
+A full path where the S3 compatible service (ie. Minio, Digital Ocean Spaces) resides. When an endpoint is specified a region is no longer required.
 
 *Default:* `undefined`
 

@@ -38,7 +38,38 @@ module.exports = {
         }
       },
 
-      requiredConfig: ['bucket', 'region'],
+      requiredConfig: ['bucket'],
+
+      configure: function(/*context*/) {
+        // Ensure default config is applied
+        this._super.configure.apply(this, arguments);
+
+        // If a custom S3 client is configured then the rest of the
+        // configuration is redundant.
+        if (this.readConfig('s3Client')) {
+          return;
+        }
+
+        // An endpoints makes the region config redundant, however
+        // at least one of them must be present.
+        if (!this.readConfig('region') && !this.readConfig('endpoint')) {
+          var message = `You must configure either an 'endpoint' or a 'region' to use the AWS.S3 client.`;
+
+          this.log(message, { color: 'red' });
+          throw new Error(message);
+        }
+      },
+
+      setup: function(/*context*/) {
+        this.s3 =
+          this.readConfig('s3Client') ||
+          new AWS.S3({
+            region: this.readConfig('region'),
+            accessKeyId: this.readConfig('accessKeyId'),
+            secretAccessKey: this.readConfig('secretAccessKey'),
+            endpoint: this.readConfig('endpoint')
+          });
+      },
 
       didPrepare: function(/*context*/) {
         var self = this;
@@ -50,14 +81,9 @@ module.exports = {
 
       upload: function(/*context*/) {
         var self = this;
-        this.key = this._buildArchiveName();
-        this.s3 =
-          this.readConfig('s3Client') ||
-          new AWS.S3({
-            region: this.readConfig('region'),
-            accessKeyId: this.readConfig('accessKeyId'),
-            secretAccessKey: this.readConfig('secretAccessKey')
-          });
+        var prefix = this.readConfig('prefix');
+        var archiveName = this._buildArchiveName();
+        this.key = prefix ? [prefix, archiveName].join('/') : archiveName;
 
         return this._upload(self.s3)
           .then(function() {
@@ -69,22 +95,13 @@ module.exports = {
 
       activate: function(/* context */) {
         var self = this;
-
         var revisionKey = this.readConfig('revisionKey');
-
-        this.s3 =
-          this.readConfig('s3Client') ||
-          new AWS.S3({
-            region: this.readConfig('region'),
-            accessKeyId: this.readConfig('accessKeyId'),
-            secretAccessKey: this.readConfig('secretAccessKey')
-          });
 
         this.log(`preparing to activate ${revisionKey}`, {
           verbose: true
         });
 
-        return this._uploadDeployInfo(this.s3)
+        return this._uploadDeployInfo(self.s3)
           .then(function() {
             self.log(`✔  ' activated revison ${revisionKey}`, {
               verbose: true
@@ -96,13 +113,15 @@ module.exports = {
       _upload: function(s3) {
         var archivePath = this.readConfig('archivePath');
         var archiveName = this._buildArchiveName();
+        var prefix = this.readConfig('prefix');
+        var key = prefix ? [prefix, archiveName].join('/') : archiveName;
         var fileName = path.join(archivePath, archiveName);
 
         var file = fs.createReadStream(fileName);
         var bucket = this.readConfig('bucket');
         var params = {
           Bucket: bucket,
-          Key: archiveName,
+          Key: key,
           Body: file
         };
 
@@ -116,10 +135,12 @@ module.exports = {
       _uploadDeployInfo: function(s3 /*, key*/) {
         var deployInfo = this.readConfig('deployInfo');
         var bucket = this.readConfig('bucket');
+        var prefix = this.readConfig('prefix');
         var body = this._createDeployInfo();
+        var key = prefix ? [prefix, deployInfo].join('/') : deployInfo;
         var params = {
           Bucket: bucket,
-          Key: deployInfo,
+          Key: key,
           Body: body
         };
 
@@ -128,7 +149,9 @@ module.exports = {
 
       _createDeployInfo() {
         var bucket = this.readConfig('bucket');
-        var key = this._buildArchiveName();
+        var prefix = this.readConfig('prefix');
+        var archiveName = this._buildArchiveName();
+        var key = prefix ? [prefix, archiveName].join('/') : archiveName;
 
         return `{"bucket":"${bucket}","key":"${key}"}`;
       },
