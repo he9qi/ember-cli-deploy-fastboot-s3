@@ -1,46 +1,39 @@
 /* eslint-env node */
 'use strict';
 
-var BasePlugin = require('ember-cli-deploy-plugin');
-var RSVP = require('rsvp');
-var fs = require('fs-extra');
-var path = require('path');
-var archiver = require('archiver');
+const BasePlugin = require('ember-cli-deploy-plugin');
+const RSVP = require('rsvp');
+const fs = require('fs-extra');
+const path = require('path');
+const archiver = require('archiver');
+const AWS = require('aws-sdk');
 
-var AWS = require('aws-sdk');
-
-var DEFAULT_DEPLOY_INFO = 'fastboot-deploy-info.json';
-var DEFAULT_DEPLOY_ARCHIVE = 'dist';
+const DEFAULT_DEPLOY_INFO = 'fastboot-deploy-info.json';
+const DEFAULT_DEPLOY_ARCHIVE = 'dist';
 
 module.exports = {
   name: 'ember-cli-deploy-fastboot-s3',
 
-  createDeployPlugin: function(options) {
-    var DeployPlugin = BasePlugin.extend({
-      name: options.name,
-
+  createDeployPlugin(options) {
+    const name = options.name;
+    const DeployPlugin = BasePlugin.extend({
+      name,
       defaultConfig: {
         archivePath: path.join('tmp', DEFAULT_DEPLOY_ARCHIVE),
         archiveType: 'zip',
         deployInfo: DEFAULT_DEPLOY_INFO,
         deployArchive: DEFAULT_DEPLOY_ARCHIVE,
-        distDir: function(context) {
-          return context.distDir;
-        },
-        revisionKey: function(context) {
-          return (
-            context.commandOptions.revision ||
-            (context.revisionData && context.revisionData.revisionKey)
-          );
-        },
-        s3Client: function(context) {
-          return context.s3Client;
-        }
+        distDir: (context) => context.distDir,
+        revisionKey: (context) => (
+          context.commandOptions.revision ||
+          (context.revisionData && context.revisionData.revisionKey)
+        ),
+        s3Client: (context) => context.s3Client,
       },
 
       requiredConfig: ['bucket'],
 
-      configure: function(/*context*/) {
+      configure(/*context*/) {
         // Ensure default config is applied
         this._super.configure.apply(this, arguments);
 
@@ -53,14 +46,14 @@ module.exports = {
         // An endpoints makes the region config redundant, however
         // at least one of them must be present.
         if (!this.readConfig('region') && !this.readConfig('endpoint')) {
-          var message = `You must configure either an 'endpoint' or a 'region' to use the AWS.S3 client.`;
+          const message = `You must configure either an 'endpoint' or a 'region' to use the AWS.S3 client.`;
 
           this.log(message, { color: 'red' });
           throw new Error(message);
         }
       },
 
-      setup: function(/*context*/) {
+      setup(/*context*/) {
         this.s3 =
           this.readConfig('s3Client') ||
           new AWS.S3({
@@ -71,74 +64,71 @@ module.exports = {
           });
       },
 
-      didPrepare: function(/*context*/) {
-        var self = this;
-        return this._pack().then(function() {
-          var archiveName = self._buildArchiveName();
-          self.log('✔  ' + archiveName, { verbose: true });
-        });
+      didPrepare(/*context*/) {
+        return this._pack()
+          .then(() => {
+            const archiveName = this._buildArchiveName();
+            this.log(`✔  ${archiveName}`, { verbose: true });
+          });
       },
 
-      upload: function(/*context*/) {
-        var self = this;
-        var prefix = this.readConfig('prefix');
-        var archiveName = this._buildArchiveName();
+      upload(/*context*/) {
+        const prefix = this.readConfig('prefix');
+        const archiveName = this._buildArchiveName();
         this.key = prefix ? [prefix, archiveName].join('/') : archiveName;
 
-        return this._upload(self.s3)
-          .then(function() {
-            self.log('✔  ' + self.key, { verbose: true });
+        return this._upload(this.s3)
+          .then(() => {
+            this.log(`✔  ${this.key}`, { verbose: true });
             return RSVP.Promise.resolve();
           })
           .catch(this._errorMessage.bind(this));
       },
 
-      activate: function(/* context */) {
-        var self = this;
-        var revisionKey = this.readConfig('revisionKey');
+      activate(/* context */) {
+        const revisionKey = this.readConfig('revisionKey');
 
         this.log(`preparing to activate ${revisionKey}`, {
           verbose: true
         });
 
-        return this._uploadDeployInfo(self.s3)
-          .then(function() {
-            self.log(`✔  ' activated revison ${revisionKey}`, {
+        return this._uploadDeployInfo(this.s3)
+          .then(() => {
+            this.log(`✔  activated revison ${revisionKey}`, {
               verbose: true
             });
           })
           .catch(this._errorMessage.bind(this));
       },
 
-      _upload: function(s3) {
-        var archivePath = this.readConfig('archivePath');
-        var archiveName = this._buildArchiveName();
-        var prefix = this.readConfig('prefix');
-        var key = prefix ? [prefix, archiveName].join('/') : archiveName;
-        var fileName = path.join(archivePath, archiveName);
-
-        var file = fs.createReadStream(fileName);
-        var bucket = this.readConfig('bucket');
-        var params = {
+      _upload(s3) {
+        const archivePath = this.readConfig('archivePath');
+        const archiveName = this._buildArchiveName();
+        const prefix = this.readConfig('prefix');
+        const key = prefix ? [prefix, archiveName].join('/') : archiveName;
+        const fileName = path.join(archivePath, archiveName);
+        const file = fs.createReadStream(fileName);
+        const bucket = this.readConfig('bucket');
+        const params = {
           Bucket: bucket,
           Key: key,
           Body: file
         };
 
-        this.log('preparing to upload to S3 bucket `' + bucket + '`', {
+        this.log(`preparing to upload to S3 bucket '${bucket}'`, {
           verbose: true
         });
 
         return s3.putObject(params).promise();
       },
 
-      _uploadDeployInfo: function(s3 /*, key*/) {
-        var deployInfo = this.readConfig('deployInfo');
-        var bucket = this.readConfig('bucket');
-        var prefix = this.readConfig('prefix');
-        var body = this._createDeployInfo();
-        var key = prefix ? [prefix, deployInfo].join('/') : deployInfo;
-        var params = {
+      _uploadDeployInfo(s3 /*, key*/) {
+        const deployInfo = this.readConfig('deployInfo');
+        const bucket = this.readConfig('bucket');
+        const prefix = this.readConfig('prefix');
+        const body = this._createDeployInfo();
+        const key = prefix ? [prefix, deployInfo].join('/') : deployInfo;
+        const params = {
           Bucket: bucket,
           Key: key,
           Body: body
@@ -148,56 +138,49 @@ module.exports = {
       },
 
       _createDeployInfo() {
-        var bucket = this.readConfig('bucket');
-        var prefix = this.readConfig('prefix');
-        var archiveName = this._buildArchiveName();
-        var key = prefix ? [prefix, archiveName].join('/') : archiveName;
+        const bucket = this.readConfig('bucket');
+        const prefix = this.readConfig('prefix');
+        const archiveName = this._buildArchiveName();
+        const key = prefix ? [prefix, archiveName].join('/') : archiveName;
 
         return `{"bucket":"${bucket}","key":"${key}"}`;
       },
 
-      _pack: function() {
+      _pack() {
         return new RSVP.Promise((resolve, reject) => {
-          var distDir = this.readConfig('distDir');
-          var archivePath = this.readConfig('archivePath');
-          var archiveType = this.readConfig('archiveType');
+          const distDir = this.readConfig('distDir');
+          const archivePath = this.readConfig('archivePath');
+          const archiveType = this.readConfig('archiveType');
+          const deployArchive = this.readConfig('deployArchive');
 
           fs.mkdirsSync(archivePath);
 
-          var archiveName = this._buildArchiveName();
-          var fileName = path.join(archivePath, archiveName);
+          const archiveName = this._buildArchiveName();
+          const fileName = path.join(archivePath, archiveName);
 
           this.log(`saving deploy archive to ${fileName}`, {
             verbose: true
           });
 
-          var output = fs.createWriteStream(fileName);
-
-          var archive = archiver(archiveType, { zlib: { level: 9 } });
+          const output = fs.createWriteStream(fileName);
+          const archive = archiver(archiveType, { zlib: { level: 9 } });
 
           archive.pipe(output);
-
-          var deployArchive = this.readConfig('deployArchive');
           archive.directory(distDir, deployArchive).finalize();
 
-          output.on('close', function() {
-            resolve();
-          });
-
-          archive.on('error', function(err) {
-            reject(err);
-          });
+          output.on('close', resolve);
+          archive.on('error', (err) => reject(err));
         });
       },
 
-      _buildArchiveName: function() {
-        var deployArchive = this.readConfig('deployArchive');
-        var revisionKey = this.readConfig('revisionKey');
-        var archiveType = this.readConfig('archiveType');
+      _buildArchiveName() {
+        const deployArchive = this.readConfig('deployArchive');
+        const revisionKey = this.readConfig('revisionKey');
+        const archiveType = this.readConfig('archiveType');
         return `${deployArchive}-${revisionKey}.${archiveType}`;
       },
 
-      _errorMessage: function(error) {
+      _errorMessage(error) {
         this.log(error, { color: 'red' });
         if (error) {
           this.log(error.stack, { color: 'red' });
