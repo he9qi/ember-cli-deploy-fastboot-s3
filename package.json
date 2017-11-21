@@ -15,7 +15,9 @@
   "scripts": {
     "build": "ember build",
     "start": "ember server",
-    "test": "ember try:each"
+    "test": "npm run test:node && npm run test:ember",
+    "test:ember": "ember try:each",
+    "test:node": "node ./tests/runner.js"
   },
   "repository": {
     "type": "git",
