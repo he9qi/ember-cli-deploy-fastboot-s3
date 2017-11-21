@@ -7,6 +7,7 @@ var fs = require('fs');
 var stat = RSVP.denodeify(fs.stat);
 var path = require('path');
 var unzip = require('unzip');
+var del = require('del');
 
 var DIST_DIR = 'dist';
 
@@ -47,6 +48,10 @@ describe('fastboot-s3 plugin', function() {
       endpoint: 'some endpoint',
       prefix: 'some prefix'
     };
+  });
+
+  afterEach(function() {
+    return del('./tmp/*');
   });
 
   describe('defaultConfig', function() {
@@ -236,31 +241,33 @@ describe('fastboot-s3 plugin', function() {
       plugin.configure(context);
 
       var archivePath = context.config['fastboot-s3'].archivePath;
-
       var archiveName = 'dist-abcd.zip';
+      var fileName = path.join(archivePath, archiveName);
+      var extractedDir = path.join(archivePath, DIST_DIR);
 
-      return assert.isFulfilled(plugin.didPrepare(context)).then(function() {
-        var fileName = path.join(archivePath, archiveName);
-
-        return stat(fileName)
-          .then(function(stats) {
-            assert.ok(stats.isFile());
-          })
-          .then(function() {
-            return new RSVP.Promise(resolve => {
-              let asd = fs
-                .createReadStream(fileName)
-                .pipe(unzip.Extract({ path: archivePath }));
-              asd.on('close', resolve());
-            });
-          })
-          .then(function() {
-            var extractedDir = `./${archivePath}/${DIST_DIR}`;
-            return stat(extractedDir).then(function(stats) {
-              assert.ok(stats.isDirectory());
-            });
+      return assert.isFulfilled(plugin.didPrepare(context))
+        .then(function() {
+          return stat(fileName);
+        })
+        .then(function(stats) {
+          assert.ok(stats.isFile());
+        })
+        .then(function() {
+          return new RSVP.Promise(resolve => {
+            fs.createReadStream(fileName)
+              .pipe(
+                unzip
+                  .Extract({ path: archivePath })
+                  .on('close', resolve)
+              );
           });
-      });
+        })
+        .then(function() {
+          return stat(extractedDir);
+        })
+        .then(function(stats) {
+          assert.ok(stats.isDirectory());
+        });
     });
   });
 
