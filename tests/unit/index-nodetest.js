@@ -255,7 +255,7 @@ describe('fastboot-s3 plugin', function() {
             });
           })
           .then(function() {
-            var extractedDir = archivePath + '/' + DIST_DIR;
+            var extractedDir = `./${archivePath}/${DIST_DIR}`;
             return stat(extractedDir).then(function(stats) {
               assert.ok(stats.isDirectory());
             });
