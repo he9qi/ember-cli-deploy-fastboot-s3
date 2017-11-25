@@ -1,25 +1,25 @@
 /* eslint-env node, mocha */
 'use strict';
 
-var RSVP = require('rsvp');
-var assert = require('../helpers/assert');
-var fs = require('fs');
-var stat = RSVP.denodeify(fs.stat);
-var path = require('path');
-var unzip = require('unzip');
+const RSVP = require('rsvp');
+const assert = require('../helpers/assert');
+const fs = require('fs');
+const stat = RSVP.denodeify(fs.stat);
+const path = require('path');
+const unzip = require('unzip');
+const del = require('del');
+const DIST_DIR = 'dist';
 
-var DIST_DIR = 'dist';
-
-var stubProject = {
-  name: function() {
+const stubProject = {
+  name() {
     return 'my-project';
   }
 };
 
-describe('fastboot-s3 plugin', function() {
-  var subject, mockUi, plugin, fullConfig, s3Client;
+describe('fastboot-s3 plugin', () => {
+  let subject, mockUi, plugin, fullConfig, s3Client;
 
-  beforeEach(function() {
+  beforeEach(() => {
     s3Client = {
       putObject: function() {
         return {
@@ -49,12 +49,14 @@ describe('fastboot-s3 plugin', function() {
     };
   });
 
-  describe('defaultConfig', function() {
-    it('has name', function() {
+  afterEach(() => del('./tmp/*'));
+
+  describe('defaultConfig', () => {
+    it('has name', () => {
       assert.equal(plugin.name, 'fastboot-s3');
     });
 
-    it('has default config', function() {
+    it('has default config', () => {
       assert.equal(plugin.defaultConfig.archivePath, 'tmp/dist');
       assert.equal(
         plugin.defaultConfig.deployInfo,
@@ -63,8 +65,8 @@ describe('fastboot-s3 plugin', function() {
     });
   });
 
-  describe('required config', function() {
-    var context;
+  describe('required config', () => {
+    let context;
 
     beforeEach(function() {
       context = {
@@ -82,10 +84,10 @@ describe('fastboot-s3 plugin', function() {
       };
     });
 
-    it('warns about missing bucket', function() {
+    it('warns about missing bucket', () => {
       delete context.config['fastboot-s3'].bucket;
 
-      var plugin = subject.createDeployPlugin({
+      let plugin = subject.createDeployPlugin({
         name: 'fastboot-s3'
       });
       plugin.beforeHook(context);
@@ -94,7 +96,7 @@ describe('fastboot-s3 plugin', function() {
           plugin.configure(context);
         }
       );
-      var messages = mockUi.messages.reduce(function(previous, current) {
+      let messages = mockUi.messages.reduce(function(previous, current) {
         if (/- Missing required config: `bucket`/.test(current)) {
           previous.push(current);
         }
@@ -118,7 +120,7 @@ describe('fastboot-s3 plugin', function() {
           plugin.configure(context);
         }
       );
-      var messages = mockUi.messages.reduce(function(previous, current) {
+      let messages = mockUi.messages.reduce(function(previous, current) {
         if (/You must configure either an 'endpoint' or a 'region' to use the AWS.S3 client./.test(current)) {
           previous.push(current);
         }
@@ -130,11 +132,11 @@ describe('fastboot-s3 plugin', function() {
     });
   });
 
-  describe('resolving s3Client from the pipline', function() {
-    it('uses the context value', function() {
-      var config = fullConfig;
-      var s3Client = {};
-      var context = {
+  describe('resolving s3Client from the pipline', () => {
+    it('uses the context value', () => {
+      const config = fullConfig;
+      const s3Client = {};
+      const context = {
         ui: mockUi,
         project: stubProject,
         config: {
@@ -152,10 +154,10 @@ describe('fastboot-s3 plugin', function() {
     });
   });
 
-  describe('resolving distDir from the pipeline', function() {
-    it('uses the context value', function() {
-      var config = fullConfig;
-      var context = {
+  describe('resolving distDir from the pipeline', () => {
+    it('uses the context value', () => {
+      const config = fullConfig;
+      const context = {
         ui: mockUi,
         project: stubProject,
         config: {
@@ -172,10 +174,10 @@ describe('fastboot-s3 plugin', function() {
     });
   });
 
-  describe('resolving revisionKey from the pipeline', function() {
+  describe('resolving revisionKey from the pipeline', () => {
     it("uses the context value if it exists and commandOptions doesn't", function() {
-      var config = fullConfig;
-      var context = {
+      const config = fullConfig;
+      const context = {
         ui: mockUi,
         project: stubProject,
         config: {
@@ -194,8 +196,8 @@ describe('fastboot-s3 plugin', function() {
     });
 
     it('uses the commandOptions value if it exists', function() {
-      var config = fullConfig;
-      var context = {
+      const config = fullConfig;
+      const context = {
         ui: mockUi,
         project: stubProject,
         config: {
@@ -216,10 +218,10 @@ describe('fastboot-s3 plugin', function() {
     });
   });
 
-  describe('didPrepare hook', function() {
+  describe('didPrepare hook', () => {
     it('creates a tarball of the dist folder with revision', function() {
-      var config = fullConfig;
-      var context = {
+      const config = fullConfig;
+      const context = {
         ui: mockUi,
         project: stubProject,
         config: {
@@ -235,40 +237,34 @@ describe('fastboot-s3 plugin', function() {
       plugin.beforeHook(context);
       plugin.configure(context);
 
-      var archivePath = context.config['fastboot-s3'].archivePath;
+      const archivePath = context.config['fastboot-s3'].archivePath;
+      const archiveName = 'dist-abcd.zip';
+      const fileName = path.join(archivePath, archiveName);
+      const extractedDir = path.join(archivePath, DIST_DIR);
 
-      var archiveName = 'dist-abcd.zip';
-
-      return assert.isFulfilled(plugin.didPrepare(context)).then(function() {
-        var fileName = path.join(archivePath, archiveName);
-
-        return stat(fileName)
-          .then(function(stats) {
-            assert.ok(stats.isFile());
-          })
-          .then(function() {
-            return new RSVP.Promise(resolve => {
-              let asd = fs
-                .createReadStream(fileName)
-                .pipe(unzip.Extract({ path: archivePath }));
-              asd.on('close', resolve());
-            });
-          })
-          .then(function() {
-            var extractedDir = archivePath + '/' + DIST_DIR;
-            return stat(extractedDir).then(function(stats) {
-              assert.ok(stats.isDirectory());
-            });
+      return assert.isFulfilled(plugin.didPrepare(context))
+        .then(() => stat(fileName))
+        .then((stats) => assert.ok(stats.isFile()))
+        .then(() => {
+          return new RSVP.Promise(resolve => {
+            fs.createReadStream(fileName)
+              .pipe(
+                unzip
+                  .Extract({ path: archivePath })
+                  .on('close', resolve)
+              );
           });
-      });
+        })
+        .then(() => stat(extractedDir))
+        .then((stats) => assert.ok(stats.isDirectory()));
     });
   });
 
-  describe('upload', function() {
-    var context;
+  describe('upload', () => {
+    let context;
 
-    beforeEach(function() {
-      var config = {
+    beforeEach(() => {
+      const config = {
         s3Client: s3Client,
         region: 'region',
         bucket: 'bucket'
@@ -287,29 +283,30 @@ describe('fastboot-s3 plugin', function() {
       };
     });
 
-    it('resolves if all uploads succeed', function() {
+    it('resolves if all uploads succeed', () => {
       plugin.beforeHook(context);
       plugin.configure(context);
       plugin.setup(context);
       plugin.didPrepare(context);
 
-      return assert.isFulfilled(plugin.upload(context)).then(function() {
-        assert.equal(mockUi.messages.length, 11);
+      return assert.isFulfilled(plugin.upload(context))
+        .then(() => {
+          assert.equal(mockUi.messages.length, 11);
 
-        var messages = mockUi.messages.reduce(function(previous, current) {
-          if (/- ✔  (dist-abcd\.zip)/.test(current)) {
-            previous.push(current);
-          }
+          let messages = mockUi.messages.reduce((previous, current) => {
+            if (/- ✔  (dist-abcd\.zip)/.test(current)) {
+              previous.push(current);
+            }
 
-          return previous;
-        }, []);
+            return previous;
+          }, []);
 
-        assert.equal(messages.length, 1);
-      });
+          assert.equal(messages.length, 1);
+        });
     });
 
-    it('prints an error message if the upload errors', function() {
-      var context = {
+    it('prints an error message if the upload errors', () => {
+      const context = {
         ui: mockUi,
         project: stubProject,
         config: {
@@ -347,9 +344,9 @@ describe('fastboot-s3 plugin', function() {
     });
   });
 
-  describe('activate hook', function() {
-    it('prints success message if activation succeeds', function() {
-      var context = {
+  describe('activate hook', () => {
+    it('prints success message if activation succeeds', () => {
+      const context = {
         ui: mockUi,
         project: stubProject,
         config: {
@@ -358,12 +355,12 @@ describe('fastboot-s3 plugin', function() {
         commandOptions: {
           revisionKey: '1234'
         },
-        distDir: process.cwd() + '/tests/fixtures/' + DIST_DIR,
+        distDir: `${process.cwd()}/tests/fixtures/${DIST_DIR}`,
         revisionData: {
           revisionKey: 'revABCD'
         },
         s3Client: {
-          putObject: function(data) {
+          putObject: (data) => {
             return {
               promise: function() {
                 if (/revABCD/.test(data.Body)) {
@@ -381,11 +378,11 @@ describe('fastboot-s3 plugin', function() {
       plugin.configure(context);
       plugin.setup(context);
 
-      var promise = plugin.activate(context);
+      const promise = plugin.activate(context);
 
-      return assert.isFulfilled(promise).then(function() {
-        assert.ok(/activated revison revABCD/.test(mockUi.messages.slice(-1)));
-      });
+      return assert
+        .isFulfilled(promise)
+        .then(() => assert.ok(/activated revison revABCD/.test(mockUi.messages.slice(-1))));
     });
   });
 });
