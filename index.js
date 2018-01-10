@@ -85,20 +85,112 @@ module.exports = {
           .catch(this._errorMessage.bind(this));
       },
 
-      activate(/* context */) {
+      activate(context) {
         const revisionKey = this.readConfig('revisionKey');
 
         this.log(`preparing to activate ${revisionKey}`, {
           verbose: true
         });
 
-        return this._uploadDeployInfo(this.s3)
-          .then(() => {
-            this.log(`✔  activated revison ${revisionKey}`, {
-              verbose: true
-            });
-          })
-          .catch(this._errorMessage.bind(this));
+        let _this = this;
+        return this.fetchRevisions(context).then(function(revisions) {
+           let found = revisions.revisions.map(function(element) { return element.revision; }).indexOf(revisionKey);
+           if (found >= 0) {
+
+             return _this._uploadDeployInfo(_this.s3)
+               .then(() => {
+                 _this.log(`✔  activated revison ${revisionKey}`, {
+                   verbose: true
+                 });
+               })
+               .catch(_this._errorMessage.bind(_this));
+
+           } else {
+             return RSVP.reject("REVISION NOT FOUND!"); // see how we should handle a pipeline failure
+           }
+         });
+      },
+
+      fetchRevisions(context) {
+        return this._list(context)
+          .then(function(revisions) {
+            return {
+              revisions: revisions
+            };
+          });
+      },
+
+      _list(/* context */) {
+        const bucket = this.readConfig('bucket');
+        const deployArchive = this.readConfig('deployArchive');
+        const archiveExt = `.${this.readConfig('archiveType')}`;
+        const deployInfo = this.readConfig('deployInfo');
+        const prefix = this.readConfig('prefix');
+        const archivePath = prefix ? [prefix, deployArchive].join('/') : deployArchive;
+        const indexKey = prefix ? [prefix, deployInfo].join('/') : deployInfo;
+
+        let revisionPrefix = `${archivePath}-`;
+
+        return RSVP.hash({
+          revisions: this.listObjects(this.s3, { Bucket: bucket, Prefix: revisionPrefix }),
+          current: this.getObject(this.s3, { Bucket: bucket, Key: indexKey }),
+        })
+        .then(function(data) {
+          let activeRevision = '';
+          if (data.current) {
+            let objectData = data.current.Body.toString('utf-8');
+            if (objectData[0] === '{') {
+              let obj = JSON.parse(objectData);
+              if (obj.key) {
+                activeRevision = obj.key.substring(revisionPrefix.length, obj.key.lastIndexOf('.'));
+              }
+            }
+          }
+
+          let results = data.revisions.Contents.sort(function(a, b) {
+            return new Date(b.LastModified) - new Date(a.LastModified);
+          }).map(function(d) {
+            let revision = '';
+            /* Check that this is the type of configured archive. */
+            if (d.Key.lastIndexOf(archiveExt) !== -1) {
+              revision = d.Key.substring(revisionPrefix.length, d.Key.lastIndexOf('.'));
+            }
+            let active = data.current && revision === activeRevision;
+            return { revision: revision, timestamp: d.LastModified, active: active, deployer: 'fastboot-s3' };
+          }).filter(function(d) {
+            /* Filter out results where revision is empty. */
+            return d.revision !== '';
+          });
+
+          return results;
+        }).catch(this._errorMessage.bind(this));
+      },
+
+      listObjects(s3, params) {
+        return new RSVP.Promise(function(resolve, reject) {
+          s3.listObjects(params, function(err, data) {
+            if (err) {
+              return reject(err);
+            }
+            return resolve(data);
+          });
+        });
+      },
+
+      getObject(s3, params) {
+        return new RSVP.Promise(function(resolve, reject) {
+          s3.getObject(params, function(err, data) {
+            if (err && err.code === 'NotFound') {
+              return resolve();
+            }
+            else if (err) {
+              return reject(err);
+            }
+            else {
+              return resolve(data);
+            }
+          });
+        });
       },
 
       _upload(s3) {
