@@ -1,6 +1,6 @@
 {
   "name": "ember-cli-deploy-fastboot-s3",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "An ember-cli-deploy plugin that archives and uploads FastBoot build to AWS S3.",
   "keywords": [
     "ember-addon",
