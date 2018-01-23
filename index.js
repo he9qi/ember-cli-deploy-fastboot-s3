@@ -180,7 +180,7 @@ module.exports = {
       getObject(s3, params) {
         return new RSVP.Promise(function(resolve, reject) {
           s3.getObject(params, function(err, data) {
-            if (err && err.code === 'NotFound') {
+            if (err && (err.code === 'NotFound' || err.code === 'NoSuchKey')) {
               return resolve();
             }
             else if (err) {
