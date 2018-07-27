@@ -202,7 +202,7 @@ Some more info: [Amazon CORS guide][5], [Stackoverflow][6]
 
 ## Running Tests
 
-* `node tests/runner.js`
+* `yarn test`
 
 For more information on using ember-cli, visit [http://ember-cli.com/](http://ember-cli.com/).
 
