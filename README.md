@@ -23,11 +23,11 @@ This plugin works along with [ember-fastboot-app-server][7]. The same `bucket` a
 
 ## Activate the most recent build or a specific revision
 
-Set the activate flag to upload and update fastboot-deploy-info.json at the same time.
+Set the activate flag to upload and update `fastboot-deploy-info.json` at the same time.
 
 ```ember deploy --activate production```
 
-Use ember deploy:activate --revision=myRevision to update fastboot-deploy-info.json with 'myRevision' and not upload the fastboot deploy archive.
+Use `ember deploy:activate --revision=myRevision` to update `fastboot-deploy-info.json` with `myRevision` and not upload the fastboot deploy archive.
 
 
 ## What is an ember-cli-deploy plugin?
@@ -61,22 +61,18 @@ ENV['fastboot-s3'] = {
 - Run the pipeline
 
 ```bash
-$ ember deploy
-```
-
-## Installation
-Run the following command in your terminal:
-
-```bash
-ember install ember-cli-deploy-fastboot-s3
+$ ember deploy production
 ```
 
 ## ember-cli-deploy Hooks Implemented
 
 For detailed information on what plugin hooks are and how they work, please refer to the [Plugin Documentation][4].
 
+- `configure`
 - `didPrepare`
 - `upload`
+- `activate`
+- `didDeploy`
 
 ## Configuration Options
 
@@ -200,7 +196,7 @@ To properly serve certain assets (i.e. webfonts) a basic CORS configuration is n
 </CORSConfiguration>
 ```
 
-Replace **http://www.your-site.com** with your domain.
+Replace `http://www.your-site.com` with your domain.
 
 Some more info: [Amazon CORS guide][5], [Stackoverflow][6]
 
@@ -217,7 +213,7 @@ PRs welcome!
 [1]: https://github.com/tomdale/fastboot-aws
 [2]: https://github.com/ember-cli-deploy/ember-cli-deploy-build
 [3]: https://github.com/ember-cli-deploy/ember-cli-deploy-revision-data
-[4]: http://ember-cli.github.io/ember-cli-deploy/plugins "Plugin Documentation"
+[4]: http://ember-cli-deploy.com/docs/v1.0.x/using-plugins "Plugin Documentation"
 [5]: http://docs.aws.amazon.com/AmazonS3/latest/dev/cors.html "Amazon CORS guide"
 [6]: http://stackoverflow.com/questions/12229844/amazon-s3-cors-cross-origin-resource-sharing-and-firefox-cross-domain-font-loa?answertab=votes#tab-top "Stackoverflow"
 [7]: https://github.com/he9qi/ember-fastboot-app-server
