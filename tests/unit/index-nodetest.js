@@ -416,4 +416,36 @@ describe('fastboot-s3 plugin', () => {
         .then(() => assert.ok(/activated revison revABCD/.test(mockUi.messages.slice(-1))));
     });
   });
+
+  describe('didDeploy hook', function() {
+    it('prints message about lack of activation when revision has not been activated', function() {
+      let messageOutput = '';
+
+      const context = {
+        deployTarget: 'qa',
+        ui: {
+          write: function(message){
+            messageOutput = messageOutput + message;
+          },
+          writeLine: function(message){
+            messageOutput = messageOutput + message + '\n';
+          }
+        },
+        project: stubProject,
+        config: {
+          'fastboot-s3': fullConfig
+        },
+        revisionData: {
+          revisionKey: '123abc',
+        }
+      };
+      plugin.beforeHook(context);
+      plugin.configure(context);
+      plugin.beforeHook(context);
+      plugin.didDeploy(context);
+      assert.match(messageOutput, /Deployed but did not activate revision 123abc./);
+      assert.match(messageOutput, /To activate, run/);
+      assert.match(messageOutput, /ember deploy:activate qa --revision=123abc/);
+    });
+  });
 });

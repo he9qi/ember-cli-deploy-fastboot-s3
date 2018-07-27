@@ -111,6 +111,17 @@ module.exports = {
          });
       },
 
+      didDeploy(context) {
+        const revisionKey = context.revisionData && context.revisionData.revisionKey;
+        const activatedRevisionKey = context.revisionData && context.revisionData.activatedRevisionKey;
+        if (revisionKey && !activatedRevisionKey) {
+          this.log("Deployed but did not activate revision " + revisionKey + ". "
+               + "To activate, run: "
+               + "ember deploy:activate " + context.deployTarget + " --revision=" + revisionKey + "\n"
+             );
+        }
+      },
+
       fetchRevisions(context) {
         return this._list(context)
           .then(function(revisions) {
