@@ -99,6 +99,10 @@ module.exports = {
 
              return _this._uploadDeployInfo(_this.s3)
                .then(() => {
+                if(!context.revisionData) {
+                  context.revisionData = {};
+                }
+                context.revisionData.activatedRevisionKey = revisionKey;
                  _this.log(`✔  activated revison ${revisionKey}`, {
                    verbose: true
                  });
