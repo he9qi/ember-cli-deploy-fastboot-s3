@@ -1,5 +1,5 @@
 {
-  "name": "ember-cli-deploy-fastboot-s3",
+  "name": "@outdoorsyco/ember-cli-deploy-fastboot-s3",
   "version": "0.3.7",
   "description": "An ember-cli-deploy plugin that archives and uploads FastBoot build to AWS S3.",
   "keywords": [
@@ -19,9 +19,9 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/he9qi/ember-cli-deploy-fastboot-s3.git"
+    "url": "https://github.com/outdoorsy/ember-cli-deploy-fastboot-s3.git"
   },
-  "author": "Qi He <qhe@heyook.com>",
+  "author": "Outdoorsy",
   "license": "MIT",
   "dependencies": {
     "archiver": "4.0.1",
