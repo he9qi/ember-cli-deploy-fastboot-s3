@@ -169,8 +169,8 @@ module.exports = {
           }).map(function(d) {
             let revision = '';
             /* Check that this is the type of configured archive. */
-            if (d.Key.lastIndexOf(archiveExt) !== -1) {
-              revision = d.Key.substring(revisionPrefix.length, d.Key.lastIndexOf('.'));
+            if (revisionPath.lastIndexOf(archiveExt) !== -1) {
+              revision = revisionPath.substring(revisionPrefix.length, revisionPath.lastIndexOf('.'));
             }
             let active = data.current && revision === activeRevision;
             return { revision: revision, timestamp: d.LastModified, active: active, deployer: 'fastboot-s3' };
