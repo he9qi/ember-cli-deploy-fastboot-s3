@@ -146,7 +146,7 @@ module.exports = {
         const indexKey = prefix ? [prefix, deployInfo].join('/') : deployInfo;
 
         let revisionPrefix = `${archivePath}-`;
-        const revisionPath = `${revisionPrefix}${revisionKey}.${archiveExt}`;
+        const revisionPath = `${revisionPrefix}${revisionKey}${archiveExt}`;
 
         return RSVP.hash({
           revisions: this.headObject(this.s3, { Bucket: bucket, Key: revisionPath }),
