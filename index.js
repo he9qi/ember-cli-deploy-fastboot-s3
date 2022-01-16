@@ -93,7 +93,7 @@ module.exports = {
         });
 
         let _this = this;
-        return this.fetchRevisions(context).then(function(revisions) {
+        return this.fetchRevision(context).then(function(revisions) {
            let found = revisions.revisions.map(function(element) { return element.revision; }).indexOf(revisionKey);
            if (found >= 0) {
 
@@ -126,8 +126,8 @@ module.exports = {
         }
       },
 
-      fetchRevisions(context) {
-        return this._list(context)
+      fetchRevision(context) {
+        return this._head(context)
           .then(function(revisions) {
             return {
               revisions: revisions
@@ -135,19 +135,21 @@ module.exports = {
           });
       },
 
-      _list(/* context */) {
+      _head(/* context */) {
         const bucket = this.readConfig('bucket');
         const deployArchive = this.readConfig('deployArchive');
         const archiveExt = `.${this.readConfig('archiveType')}`;
         const deployInfo = this.readConfig('deployInfo');
         const prefix = this.readConfig('prefix');
+        const revisionKey = this.readConfig('revisionKey');
         const archivePath = prefix ? [prefix, deployArchive].join('/') : deployArchive;
         const indexKey = prefix ? [prefix, deployInfo].join('/') : deployInfo;
 
         let revisionPrefix = `${archivePath}-`;
+        const revisionPath = `${revisionPrefix}${revisionKey}${archiveExt}`;
 
         return RSVP.hash({
-          revisions: this.listObjects(this.s3, { Bucket: bucket, Prefix: revisionPrefix }),
+          revisions: this.headObject(this.s3, { Bucket: bucket, Key: revisionPath }),
           current: this.getObject(this.s3, { Bucket: bucket, Key: indexKey }),
         })
         .then(function(data) {
@@ -162,13 +164,13 @@ module.exports = {
             }
           }
 
-          let results = data.revisions.Contents.sort(function(a, b) {
+          let results = data.revisions.sort(function(a, b) {
             return new Date(b.LastModified) - new Date(a.LastModified);
           }).map(function(d) {
             let revision = '';
             /* Check that this is the type of configured archive. */
-            if (d.Key.lastIndexOf(archiveExt) !== -1) {
-              revision = d.Key.substring(revisionPrefix.length, d.Key.lastIndexOf('.'));
+            if (revisionPath.lastIndexOf(archiveExt) !== -1) {
+              revision = revisionPath.substring(revisionPrefix.length, revisionPath.lastIndexOf('.'));
             }
             let active = data.current && revision === activeRevision;
             return { revision: revision, timestamp: d.LastModified, active: active, deployer: 'fastboot-s3' };
@@ -181,13 +183,14 @@ module.exports = {
         }).catch(this._errorMessage.bind(this));
       },
 
-      listObjects(s3, params) {
-        return new RSVP.Promise(function(resolve, reject) {
-          s3.listObjects(params, function(err, data) {
+      headObject(s3, params) {
+        return new RSVP.Promise(function(resolve) {
+          s3.headObject(params, function(err, data) {
             if (err) {
-              return reject(err);
+              // revision not found
+              return resolve([]);
             }
-            return resolve(data);
+            return resolve([data]);
           });
         });
       },

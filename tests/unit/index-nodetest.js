@@ -36,12 +36,12 @@ describe('fastboot-s3 plugin', () => {
           }
         };
       },
-      listObjects: function() {
+      headObject: function(){
         return {
           promise: function() {
             return RSVP.Promise.resolve();
           }
-        };
+        }
       }
     };
     subject = require('../../index');
@@ -387,15 +387,10 @@ describe('fastboot-s3 plugin', () => {
               }
             };
           },
-          listObjects: (s3, callback) => {
+          headObject: (s3, callback) => {
             callback(null,
               {
-                Contents: [
-                  {Key: 'some prefix/fastboot-deploy-info.json', LastModified: new Date()},
-                  {Key: 'some prefix/dist-123456.zip', LastModified: new Date()},
-                  {Key: 'some prefix/dist-revABCD.zip', LastModified: new Date()},
-                  {Key: 'some prefix/dist-349456.zip', LastModified: new Date()}
-                ]
+                LastModified: new Date(),
               }
             );
           },
